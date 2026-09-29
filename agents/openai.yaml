@@ -1,0 +1,6 @@
+interface:
+  display_name: "Zc 航空直播主题 CSS"
+  short_description: "生成保持布局的配色、字体与可选视觉扩展主题 CSS"
+  default_prompt: "使用 $zc-flight-theme-css，根据我的文字描述或参考图片创建保持组件布局和文字可读性的 Zc 航空直播主题；Fusion Pixel 可直接使用，新增其他字体或共享视觉扩展时先向我说明并取得确认。"
+policy:
+  allow_implicit_invocation: true
