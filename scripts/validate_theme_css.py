@@ -101,10 +101,111 @@ Z_INDEX_PROPERTIES = {
     "--scanline-overlay-z-index",
     "--scan-sweep-z-index",
 }
+CLIENT_COLOR_PROPERTIES = {
+    "--client-window-background",
+    "--client-panel-background",
+    "--client-text",
+    "--client-muted-text",
+    "--client-border",
+    "--client-control-background",
+    "--client-control-hover-background",
+    "--client-control-pressed-background",
+    "--client-control-text",
+    "--client-control-disabled-background",
+    "--client-control-disabled-text",
+    "--client-input-background",
+    "--client-input-text",
+    "--client-placeholder-text",
+    "--client-focus",
+    "--client-selection-background",
+    "--client-selection-text",
+    "--client-accent-background",
+    "--client-accent-hover-background",
+    "--client-accent-pressed-background",
+    "--client-accent-text",
+    "--client-table-heading-background",
+    "--client-table-heading-text",
+    "--client-table-row-hover-background",
+    "--client-danger-background",
+    "--client-danger-hover-background",
+    "--client-danger-pressed-background",
+    "--client-danger-text",
+    "--client-success-text",
+    "--client-warning-text",
+    "--client-scrollbar-track",
+    "--client-scrollbar-thumb",
+}
+CLIENT_TEXT_PAIRS = (
+    ("--client-text", "--client-window-background"),
+    ("--client-text", "--client-panel-background"),
+    ("--client-text", "--client-table-row-hover-background"),
+    ("--client-muted-text", "--client-panel-background"),
+    ("--client-control-text", "--client-control-background"),
+    ("--client-control-text", "--client-control-hover-background"),
+    ("--client-control-text", "--client-control-pressed-background"),
+    ("--client-control-disabled-text", "--client-control-disabled-background"),
+    ("--client-input-text", "--client-input-background"),
+    ("--client-placeholder-text", "--client-input-background"),
+    ("--client-selection-text", "--client-selection-background"),
+    ("--client-accent-text", "--client-accent-background"),
+    ("--client-accent-text", "--client-accent-hover-background"),
+    ("--client-accent-text", "--client-accent-pressed-background"),
+    ("--client-table-heading-text", "--client-table-heading-background"),
+    ("--client-danger-text", "--client-danger-background"),
+    ("--client-danger-text", "--client-danger-hover-background"),
+    ("--client-danger-text", "--client-danger-pressed-background"),
+    ("--client-success-text", "--client-panel-background"),
+    ("--client-warning-text", "--client-panel-background"),
+)
 
 
 def normalize_value(value: str) -> str:
     return " ".join(value.split())
+
+
+def relative_luminance(color: str) -> float:
+    components = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [
+        component / 12.92 if component <= 0.04045
+        else ((component + 0.055) / 1.055) ** 2.4
+        for component in components
+    ]
+    return sum(channel * weight for channel, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+
+def contrast_ratio(foreground: str, background: str) -> float:
+    lighter, darker = sorted(
+        (relative_luminance(foreground), relative_luminance(background)),
+        reverse=True,
+    )
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def validate_client_colors(theme: dict[str, str], reference: dict[str, str]) -> list[str]:
+    errors = []
+    missing_reference = CLIENT_COLOR_PROPERTIES - reference.keys()
+    if missing_reference:
+        errors.append(
+            "classic 缺少客户端变量：" + ", ".join(sorted(missing_reference))
+        )
+    valid = {}
+    for name in sorted(CLIENT_COLOR_PROPERTIES):
+        value = theme.get(name)
+        if value is None:
+            continue
+        if re.fullmatch(r"#[0-9a-fA-F]{6}", value) is None:
+            errors.append(f"{name} 必须是不透明的 #RRGGBB 色值")
+        else:
+            valid[name] = value
+    for foreground, background in CLIENT_TEXT_PAIRS:
+        if foreground not in valid or background not in valid:
+            continue
+        ratio = contrast_ratio(valid[foreground], valid[background])
+        if ratio < 4.5:
+            errors.append(
+                f"{foreground} 与 {background} 对比度 {ratio:.2f}:1，低于 4.5:1"
+            )
+    return errors
 
 
 def parse_declarations(
@@ -511,6 +612,7 @@ def validate(
         errors.append(f"缺少 classic 核心变量：{', '.join(missing)}")
     if invalid_extra:
         errors.append(f"包含未经允许的扩展变量：{', '.join(invalid_extra)}")
+    errors.extend(validate_client_colors(theme, reference))
 
     actual_core_order = [name for name, _ in declarations if name in reference]
     expected_core_order = [name for name, _ in reference_declarations]

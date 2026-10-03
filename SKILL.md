@@ -1,11 +1,11 @@
 ---
 name: zc-flight-theme-css
-description: 根据文字描述或参考图片创建新的 Zc 航空直播页主题 CSS，提取配色、渐变、明暗、材质与氛围特征，并选择合适字体。默认以 classic.css 为基准生成保持布局和文字可读性的独立主题；项目通用的 Fusion Pixel 可直接使用，新增其他字体或扩展共享视觉效果需用户明确确认。不适用于重新设计组件布局或未授权修改 HTML、JavaScript。
+description: 根据文字描述或参考图片创建 Zc 航空直播页及数据录入客户端共用的主题 CSS，保持布局、控件状态和文字可读性。以 classic.css 为基准；项目通用 Fusion Pixel 可直接使用，新增其他字体或共享视觉能力需用户确认。不适用于重新设计组件布局或未授权修改 HTML、JavaScript。
 ---
 
 # Zc 航空直播页主题 CSS
 
-将用户的文字描述或参考图片转换为主题文件，并放在 `classic.css` 旁边。始终读取目标项目当前的 `classic.css` 和基础样式表，不依赖记忆中的变量或 Skill 内置副本。
+将用户的文字描述或参考图片转换为主题文件，并放在 `classic.css` 旁边。主题同时供直播页和数据录入客户端 WebView 使用。始终读取目标项目当前的 `classic.css`、直播页基础样式表，以及存在时的客户端基础样式表，不依赖记忆中的变量或 Skill 内置副本。
 
 ## 选择工作模式
 
@@ -43,6 +43,7 @@ description: 根据文字描述或参考图片创建新的 Zc 航空直播页主
 2. 同时读取 `classic.css` 和同目录体系下的基础样式表，通常为 `zc/css/zc-flight-live.css`。
 3. 确认基础样式表实际使用了 classic 声明的变量。项目结构不同且无法安全确认布局约定时，停止操作并说明原因。
 4. 将 classic 中声明的变量视为所有新主题必须提供的核心变量。基础样式中带关闭 fallback 的共享效果变量属于可选扩展变量，不要求所有主题重复声明，也不要仅为记录默认值而加入 classic。
+5. classic 中的 `--client-*` 是客户端控件的必需核心变量；创建或更新主题时阅读 [references/client-webview.md](references/client-webview.md)，检查它们在客户端基础样式中的实际用法。
 
 ## 创建主题文件
 
@@ -59,6 +60,7 @@ body[data-page-style="<style-name>"] {
 - 复制 classic 的全部核心变量，只修改实现目标视觉风格所需的值，核心变量的相对顺序必须与 classic 一致。
 - 可选扩展变量只能来自基础样式已经实现并由校验器允许的效果槽，不得借扩展模式加入任意变量。
 - 五档抽数颜色 `--luck-very-good-color`、`--luck-good-color`、`--luck-average-color`、`--luck-bad-color`、`--luck-very-bad-color` 属于核心变量，所有新建或更新的主题都必须明确声明。它们要体现正向、中性和负向层级，并在实际单元格背景上保持可辨；不要只依赖红绿差异。
+- `--client-*` 同样属于核心变量，每款主题必须逐项定义，不通过客户端 fallback 假装完成适配。只修改这些变量的值，不在主题中增加控件选择器或几何属性。
 - 将描述或图片特征转换为协调配色，并覆盖记分板、身份栏、主标题和滚动栏。视觉还原与可读性冲突时，以可读性为先。
 
 ## 保证文字可读性
@@ -68,6 +70,7 @@ body[data-page-style="<style-name>"] {
 - 记分板标题、用户名、表头、普通单元格和五档抽数颜色；
 - 身份栏文字、地点、主标题、时间块和滚动文字；
 - 位于全屏纹理、扫描线或移动高亮层下方的所有文字。
+- 客户端窗口、面板、菜单、按钮、输入框、表格、弹窗及其悬停、按下、选中、禁用、焦点、错误和状态提示；按 [references/client-webview.md](references/client-webview.md) 的成对颜色检查。
 
 处理顺序如下：
 
@@ -108,6 +111,8 @@ python3 <skill-directory>/scripts/validate_theme_css.py \
   <new-theme.css> --reference <classic.css>
 ```
 
+校验器会将 classic 中的客户端变量作为必需核心变量，并检查客户端实色及文字对比度。该静态检查不能替代 WebView 中的焦点、禁用、长文字、字体加载和滚动状态的可视检查。
+
 使用任一项目通用 Fusion Pixel 字体栈时增加 `--base <zc-flight-live.css>`，校验器会检查共享字体栈、本地 WOFF2 和许可证文件。无需增加 `--allow-custom-fonts`。
 
 新增其他本地字体必须先取得确认，再增加 `--allow-custom-fonts`。新增其他远程字体必须先取得单独确认，再同时增加 `--allow-custom-fonts --allow-remote-fonts`。
@@ -124,4 +129,4 @@ python3 <skill-directory>/scripts/validate_theme_css.py \
 
 ## 交付
 
-说明核心色板及用途、字体及选择原因、五档抽数颜色、可读性调整、启用的扩展能力、共享文件影响范围，以及执行过的布局、字体加载、减少动态效果和回归检查。默认创建并校验独立 CSS 后结束；除非用户明确要求，不修改 HTML、JavaScript 注册表、API 值或文档。
+说明核心色板及用途、字体及选择原因、五档抽数颜色、客户端控件及状态配色、可读性调整、启用的扩展能力、共享文件影响范围，以及执行过的布局、字体加载、减少动态效果和回归检查。默认创建并校验独立 CSS 后结束；除非用户明确要求，不修改 HTML、JavaScript 注册表、API 值或文档。
